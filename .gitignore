@@ -1,0 +1,11 @@
+# Derived pipeline artifacts
+raw/
+docs/
+chunks.db
+.embed_cache.npz
+
+# Secrets
+.env
+.DS_Store
+__pycache__/
+*.pyc
