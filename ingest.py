@@ -228,7 +228,9 @@ def embed_texts(texts, input_type="search_document"):
         text for text in dict.fromkeys(texts)
         if text_key(text, input_type) not in cache
     ]
-    if cache:
+    # A single lookup is an interactive query, not a batch job; stay quiet.
+    verbose = len(texts) > 1
+    if cache and verbose:
         print(f"  reusing {len(texts) - len(pending)} cached vectors")
 
     if pending:
@@ -239,7 +241,8 @@ def embed_texts(texts, input_type="search_document"):
                 cache[text_key(text, input_type)] = vector
             save_cache(cache)
             done += len(batch)
-            print(f"  embedded {done}/{len(pending)}", flush=True)
+            if verbose:
+                print(f"  embedded {done}/{len(pending)}", flush=True)
             if done < len(pending):
                 time.sleep(EMBED_PAUSE)
 

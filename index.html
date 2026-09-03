@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>clash-rag</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --border: #d9dde3;
+    --text: #1b1f24;
+    --muted: #6b7480;
+    --accent: #2f6feb;
+    --error: #b4232c;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 system-ui, sans-serif;
+  }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 16px 96px;
+  }
+
+  h1 {
+    font-size: 18px;
+    margin: 0 0 4px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 24px;
+  }
+
+  /* Chat */
+
+  .turn {
+    margin-bottom: 24px;
+  }
+
+  .question {
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    max-width: 80%;
+    margin-left: auto;
+    width: fit-content;
+  }
+
+  .answer {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    white-space: pre-wrap;
+  }
+
+  .answer.error {
+    border-color: var(--error);
+    color: var(--error);
+    white-space: normal;
+  }
+
+  .pending {
+    color: var(--muted);
+  }
+
+  /* Citation chips */
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .chip {
+    font: inherit;
+    font-size: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 10px;
+    cursor: pointer;
+    color: var(--text);
+  }
+
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .chip[aria-expanded="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .chip-number {
+    color: var(--muted);
+    margin-right: 4px;
+  }
+
+  .chip[aria-expanded="true"] .chip-number {
+    color: #cfe0ff;
+  }
+
+  .expansion {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    font-size: 14px;
+  }
+
+  .expansion[hidden] {
+    display: none;
+  }
+
+  .expansion-head {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  /* Retrieved-chunk panel */
+
+  details {
+    margin-top: 12px;
+    font-size: 14px;
+  }
+
+  summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .chunk {
+    border-top: 1px solid var(--border);
+    padding: 10px 0;
+    white-space: pre-wrap;
+  }
+
+  .chunk-head {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    white-space: normal;
+  }
+
+  .score {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Composer */
+
+  form {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+  }
+
+  .composer {
+    display: flex;
+    gap: 8px;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  input, button[type="submit"] {
+    font: inherit;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  input {
+    flex: 1;
+    background: var(--panel);
+    color: var(--text);
+  }
+
+  button[type="submit"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+
+  button[type="submit"]:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>clash-rag</h1>
+  <p class="subtitle">Answers come only from the retrieved wiki chunks, cited by number.</p>
+  <div id="log"></div>
+</main>
+
+<form id="composer">
+  <div class="composer">
+    <input id="question" autocomplete="off" autofocus
+           placeholder="how do I counter mini pekka">
+    <button type="submit">Ask</button>
+  </div>
+</form>
+
+<script>
+const log = document.getElementById("log");
+const form = document.getElementById("composer");
+const input = document.getElementById("question");
+const button = form.querySelector("button");
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function scrollToBottom() {
+  window.scrollTo({ top: document.body.scrollHeight });
+}
+
+// One question and its answer. Returns the handles the stream writes into.
+function startTurn(question) {
+  const turn = el("div", "turn");
+  turn.append(el("div", "question", question));
+
+  const answer = el("div", "answer pending", "…");
+  const chips = el("div", "chips");
+  const expansions = el("div");
+  const sources = el("div");
+  turn.append(answer, chips, expansions, sources);
+
+  log.append(turn);
+  scrollToBottom();
+  return { answer, chips, expansions, sources };
+}
+
+// A chip per chunk; clicking toggles the chunk's full text underneath.
+function renderChips(container, expansions, chunks) {
+  for (const chunk of chunks) {
+    const chip = el("button", "chip");
+    chip.type = "button";
+    chip.setAttribute("aria-expanded", "false");
+    chip.append(el("span", "chip-number", "[" + chunk.n + "]"));
+    chip.append(document.createTextNode(chunk.title + " — " + chunk.section));
+
+    const expansion = el("div", "expansion");
+    expansion.hidden = true;
+    expansion.append(el("div", "expansion-head",
+      "[" + chunk.n + "] " + chunk.title + " — " + chunk.section +
+      "  ·  score " + chunk.score.toFixed(4)));
+    expansion.append(document.createTextNode(chunk.text));
+
+    chip.addEventListener("click", () => {
+      const open = expansion.hidden;
+      expansion.hidden = !open;
+      chip.setAttribute("aria-expanded", String(open));
+    });
+
+    container.append(chip);
+    expansions.append(expansion);
+  }
+}
+
+// Collapsed panel listing every retrieved chunk with its score.
+function renderSources(container, chunks) {
+  const details = el("details");
+  details.append(el("summary", null, "Retrieved chunks (" + chunks.length + ")"));
+  for (const chunk of chunks) {
+    const item = el("div", "chunk");
+    const head = el("div", "chunk-head");
+    head.append(el("span", "score", chunk.score.toFixed(4)));
+    head.append(document.createTextNode(
+      "  ·  [" + chunk.n + "] " + chunk.title + " — " + chunk.section));
+    item.append(head);
+    item.append(document.createTextNode(chunk.text));
+    details.append(item);
+  }
+  container.append(details);
+}
+
+function showError(answer, message) {
+  answer.className = "answer error";
+  answer.textContent = message;
+}
+
+// Split an SSE buffer into complete events, returning the trailing partial.
+function parseEvents(buffer, handle) {
+  const blocks = buffer.split("\n\n");
+  const remainder = blocks.pop();
+  for (const block of blocks) {
+    let name = "message";
+    let data = "";
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event:")) name = line.slice(6).trim();
+      else if (line.startsWith("data:")) data += line.slice(5).trim();
+    }
+    if (data) handle(name, JSON.parse(data));
+  }
+  return remainder;
+}
+
+async function ask(question) {
+  const { answer, chips, expansions, sources } = startTurn(question);
+  let streamed = "";
+
+  function handle(name, data) {
+    if (name === "chunks") {
+      renderChips(chips, expansions, data.chunks);
+      renderSources(sources, data.chunks);
+    } else if (name === "token") {
+      streamed += data.text;
+      answer.className = "answer";
+      answer.textContent = streamed;
+      scrollToBottom();
+    } else if (name === "error") {
+      showError(answer, data.message);
+    }
+  }
+
+  let response;
+  try {
+    response = await fetch("/ask", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+  } catch (error) {
+    showError(answer, "Could not reach the server: " + error.message);
+    return;
+  }
+
+  // Failures before the stream opens come back as ordinary JSON.
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    showError(answer, detail && detail.detail
+      ? String(detail.detail)
+      : "Request failed with status " + response.status);
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    buffer = parseEvents(buffer, handle);
+  }
+  parseEvents(buffer + "\n\n", handle);
+
+  if (!streamed && !answer.classList.contains("error")) {
+    showError(answer, "The answer stream ended without any text.");
+  }
+  scrollToBottom();
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const question = input.value.trim();
+  if (!question) return;
+
+  input.value = "";
+  input.disabled = button.disabled = true;
+  try {
+    await ask(question);
+  } finally {
+    input.disabled = button.disabled = false;
+    input.focus();
+  }
+});
+</script>
+</body>
+</html>
