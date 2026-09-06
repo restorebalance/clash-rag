@@ -3,233 +3,137 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>clash-rag</title>
+<title>Royale Codex</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Named tokens instead of hex literals scattered through the markup.
+  // "ink" rather than "base" — bg-base/text-base would collide with
+  // Tailwind's own font-size utility.
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: "#14161C",
+          panel: "#1B1E26",
+          line: "#2A2E3A",
+          body: "#C8CBD4",
+          head: "#EDEFF4",
+          muted: "#7B8194",
+          gold: "#E8B84B",
+        },
+        fontFamily: {
+          display: ['"Bricolage Grotesque"', "system-ui", "sans-serif"],
+          sans: ["Inter", "system-ui", "sans-serif"],
+          mono: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
+        },
+      },
+    },
+  };
+</script>
+
 <style>
-  :root {
-    --bg: #f6f7f9;
-    --panel: #ffffff;
-    --border: #d9dde3;
-    --text: #1b1f24;
-    --muted: #6b7480;
-    --accent: #2f6feb;
-    --error: #b4232c;
-  }
+  /* Gold focus ring everywhere, never the browser default. */
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid #E8B84B; outline-offset: 2px; border-radius: 6px; }
 
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font: 15px/1.55 system-ui, sans-serif;
-  }
-
-  main {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 24px 16px 96px;
-  }
-
-  h1 {
-    font-size: 18px;
-    margin: 0 0 4px;
-  }
-
-  .subtitle {
-    color: var(--muted);
-    font-size: 13px;
-    margin: 0 0 24px;
-  }
-
-  /* Chat */
-
-  .turn {
-    margin-bottom: 24px;
-  }
-
-  .question {
-    background: var(--accent);
-    color: #fff;
-    padding: 10px 14px;
-    border-radius: 10px;
-    max-width: 80%;
-    margin-left: auto;
-    width: fit-content;
-  }
-
-  .answer {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-top: 12px;
-    white-space: pre-wrap;
-  }
-
-  .answer.error {
-    border-color: var(--error);
-    color: var(--error);
-    white-space: normal;
-  }
-
-  .pending {
-    color: var(--muted);
-  }
-
-  /* Citation chips */
-
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 10px;
-  }
-
-  .chip {
-    font: inherit;
-    font-size: 12px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 4px 10px;
-    cursor: pointer;
-    color: var(--text);
-  }
-
-  .chip:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .chip[aria-expanded="true"] {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-
-  .chip-number {
-    color: var(--muted);
-    margin-right: 4px;
-  }
-
-  .chip[aria-expanded="true"] .chip-number {
-    color: #cfe0ff;
-  }
-
-  .expansion {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    border-radius: 6px;
-    padding: 10px 12px;
-    margin-top: 8px;
-    white-space: pre-wrap;
-    font-size: 14px;
-  }
-
-  .expansion[hidden] {
-    display: none;
-  }
-
-  .expansion-head {
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-
-  /* Retrieved-chunk panel */
-
-  details {
-    margin-top: 12px;
-    font-size: 14px;
-  }
-
-  summary {
-    cursor: pointer;
-    color: var(--muted);
-    font-size: 13px;
-  }
-
-  .chunk {
-    border-top: 1px solid var(--border);
-    padding: 10px 0;
-    white-space: pre-wrap;
-  }
-
-  .chunk-head {
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 4px;
-    white-space: normal;
-  }
-
-  .score {
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Composer */
-
-  form {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--bg);
-    border-top: 1px solid var(--border);
-    padding: 12px 16px;
-  }
-
-  .composer {
-    display: flex;
-    gap: 8px;
-    max-width: 760px;
-    margin: 0 auto;
-  }
-
-  input, button[type="submit"] {
-    font: inherit;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-  }
-
-  input {
-    flex: 1;
-    background: var(--panel);
-    color: var(--text);
-  }
-
-  button[type="submit"] {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-    cursor: pointer;
-  }
-
-  button[type="submit"]:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #2A2E3A; border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
 </style>
 </head>
-<body>
-<main>
-  <h1>clash-rag</h1>
-  <p class="subtitle">Answers come only from the retrieved wiki chunks, cited by number.</p>
-  <div id="log"></div>
-</main>
+<body class="bg-ink font-sans text-[15px] leading-relaxed text-body antialiased">
 
-<form id="composer">
-  <div class="composer">
+<aside class="fixed inset-y-0 left-0 z-20 hidden w-72 flex-col border-r border-line bg-panel lg:flex">
+  <div class="flex items-center gap-2.5 border-b border-line px-5 py-4">
+    <div class="grid h-8 w-8 place-items-center rounded-lg border border-gold/40 bg-gold/10 text-sm text-gold">♛</div>
+    <div class="font-display text-[17px] font-bold tracking-tight text-gold">Royale Codex</div>
+  </div>
+
+  <div class="px-4 py-3">
+    <button id="new-chat" type="button"
+            class="w-full rounded-lg border border-line bg-ink px-3 py-2 text-xs font-medium
+                   text-muted transition-colors hover:border-gold/60 hover:text-gold">
+      + New question
+    </button>
+  </div>
+
+  <div class="px-5 pb-2 text-[11px] font-medium uppercase tracking-wider text-muted">Recent</div>
+  <div id="history" class="flex-1 space-y-1 overflow-y-auto px-3 pb-4"></div>
+
+  <div class="border-t border-line px-5 py-4">
+    <div class="text-[10px] font-medium uppercase tracking-wider text-muted">Corpus</div>
+    <div class="mt-2.5 flex items-baseline gap-2">
+      <span class="font-mono text-sm text-head">1,554</span>
+      <span class="text-xs text-muted">chunks</span>
+    </div>
+    <div class="mt-1 flex items-baseline gap-2">
+      <span class="font-mono text-sm text-head">197</span>
+      <span class="text-xs text-muted">wiki pages</span>
+    </div>
+  </div>
+</aside>
+
+<div class="lg:pl-72">
+  <header class="sticky top-0 z-10 border-b border-line bg-ink">
+    <div class="mx-auto flex max-w-3xl items-center px-6 py-4">
+      <span class="text-xs text-muted">Every answer cites its sources</span>
+    </div>
+  </header>
+
+  <main id="main" class="mx-auto max-w-3xl px-6 pb-44 pt-8">
+    <div id="log"></div>
+  </main>
+</div>
+
+<form id="composer" class="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-ink lg:left-72">
+  <div class="mx-auto flex max-w-3xl gap-2 px-6 py-4">
     <input id="question" autocomplete="off" autofocus
-           placeholder="how do I counter mini pekka">
-    <button type="submit">Ask</button>
+           placeholder="how do I counter mini pekka"
+           class="flex-1 rounded-lg border border-line bg-panel px-4 py-2.5 text-[15px] text-body
+                  placeholder:text-muted focus:border-gold/70">
+    <button type="submit"
+            class="rounded-lg bg-gold px-5 py-2.5 text-[15px] font-semibold text-ink
+                   transition-colors hover:bg-[#F2C65C] disabled:opacity-40">Ask</button>
   </div>
 </form>
 
 <script>
+const EXAMPLES = [
+  "how do I counter mini pekka",
+  "what does evo pekka do differently",
+  "best way to defend a golem push",
+];
+
+const HISTORY_KEY = "royale-codex-history";
+const HISTORY_LIMIT = 25;
+
+// Repeated class strings, named so the render functions stay readable.
+const STYLE = {
+  status: "animate-pulse text-sm text-muted",
+  answer: "whitespace-pre-wrap leading-[1.75] text-body",
+  error: "rounded-lg border border-red-900/60 bg-red-950/40 p-4 text-sm leading-6 text-red-300",
+  chip: "rounded-full border border-line bg-ink px-3 py-1 text-xs text-muted transition-colors hover:border-gold/50 hover:text-body",
+  chipOpen: "rounded-full border border-gold/60 bg-gold/10 px-3 py-1 text-xs text-body",
+  chipNumber: "mr-1.5 font-mono text-gold",
+  chipNumberOpen: "mr-1.5 font-mono text-gold",
+  example: "rounded-full border border-line bg-panel px-4 py-2 text-xs text-muted transition-colors hover:border-gold hover:text-gold",
+  historyItem: "group flex cursor-pointer items-start gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-ink",
+  historyItemActive: "group flex cursor-pointer items-start gap-2 rounded-lg border border-gold/30 bg-gold/[0.07] px-3 py-2",
+};
+
+const main = document.getElementById("main");
 const log = document.getElementById("log");
 const form = document.getElementById("composer");
 const input = document.getElementById("question");
 const button = form.querySelector("button");
+const historyList = document.getElementById("history");
+
+let activeId = null;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -242,70 +146,286 @@ function scrollToBottom() {
   window.scrollTo({ top: document.body.scrollHeight });
 }
 
+/* ---------------------------------------------------------------- history */
+
+// Conversations live in localStorage, which can throw when the browser
+// blocks site data; history is a convenience, so failures stay silent.
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveHistory(items) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, HISTORY_LIMIT)));
+  } catch (error) {
+    /* full or unavailable: keep the page working without persistence */
+  }
+}
+
+function rememberTurn(question, answer, chunks) {
+  const item = { id: String(Date.now()), question, answer, chunks, at: Date.now() };
+  const items = loadHistory().filter((entry) => entry.question !== question);
+  items.unshift(item);
+  saveHistory(items);
+  activeId = item.id;
+  renderHistory();
+}
+
+function timeAgo(at) {
+  const seconds = Math.max(0, (Date.now() - at) / 1000);
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return Math.floor(seconds / 60) + "m ago";
+  if (seconds < 86400) return Math.floor(seconds / 3600) + "h ago";
+  return Math.floor(seconds / 86400) + "d ago";
+}
+
+function renderHistory() {
+  const items = loadHistory();
+  historyList.textContent = "";
+
+  if (!items.length) {
+    historyList.append(el("div", "px-3 py-2 text-xs text-muted", "Nothing yet."));
+    return;
+  }
+
+  for (const item of items) {
+    const row = el("div", item.id === activeId ? STYLE.historyItemActive : STYLE.historyItem);
+
+    const body = el("div", "min-w-0 flex-1");
+    body.append(el("div", "truncate text-[13px] text-body", item.question));
+    body.append(el("div", "mt-0.5 text-[11px] text-muted",
+      timeAgo(item.at) + " · " + item.chunks.length + " chunks"));
+    body.addEventListener("click", () => restoreTurn(item));
+
+    const remove = el("button", "shrink-0 px-1 text-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100", "×");
+    remove.type = "button";
+    remove.title = "Remove";
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation();
+      saveHistory(loadHistory().filter((entry) => entry.id !== item.id));
+      if (activeId === item.id) newChat();
+      else renderHistory();
+    });
+
+    row.append(body, remove);
+    historyList.append(row);
+  }
+}
+
+/* ------------------------------------------------------------ empty state */
+
+function showEmpty() {
+  if (document.getElementById("empty")) return;
+
+  const box = el("div", "flex flex-col items-center pt-[11vh] text-center");
+  box.id = "empty";
+
+  box.append(el("div",
+    "grid h-14 w-14 place-items-center rounded-2xl border border-gold/40 bg-gold/10 text-2xl text-gold",
+    "♛"));
+  box.append(el("h2", "mt-6 font-display text-3xl font-bold tracking-tight text-head", "Royale Codex"));
+  box.append(el("p", "mt-3 max-w-md leading-[1.7] text-muted",
+    "Ask about strategy, matchups, or card interactions. Every answer cites the wiki chunks it came from."));
+
+  const pills = el("div", "mt-8 flex flex-wrap justify-center gap-2");
+  for (const example of EXAMPLES) {
+    const pill = el("button", STYLE.example, example);
+    pill.type = "button";
+    pill.addEventListener("click", () => {
+      input.value = example;
+      submitQuestion(example);
+    });
+    pills.append(pill);
+  }
+  box.append(pills);
+
+  main.append(box);
+}
+
+function hideEmpty() {
+  const box = document.getElementById("empty");
+  if (box) box.remove();
+}
+
+function newChat() {
+  log.textContent = "";
+  activeId = null;
+  renderHistory();
+  showEmpty();
+  input.focus();
+}
+
+/* ----------------------------------------------------------------- a turn */
+
 // One question and its answer. Returns the handles the stream writes into.
 function startTurn(question) {
-  const turn = el("div", "turn");
-  turn.append(el("div", "question", question));
+  const turn = el("div", "mb-10");
 
-  const answer = el("div", "answer pending", "…");
-  const chips = el("div", "chips");
+  const row = el("div", "flex justify-end");
+  row.append(el("div",
+    "max-w-[80%] rounded-2xl rounded-br-md border border-line bg-panel px-4 py-2.5 text-body",
+    question));
+  turn.append(row);
+
+  const card = el("div", "group relative mt-5 rounded-2xl border border-line bg-panel p-5");
+  const answer = el("div", STYLE.status, "searching…");
+  const chips = el("div", "mt-5 flex flex-wrap gap-2");
   const expansions = el("div");
   const sources = el("div");
-  turn.append(answer, chips, expansions, sources);
+  card.append(answer, chips, expansions, sources);
+  turn.append(card);
 
   log.append(turn);
   scrollToBottom();
-  return { answer, chips, expansions, sources };
+  return { answer, chips, expansions, sources, card };
+}
+
+// Copy the finished answer. textContent walks the citation buttons too, so
+// the copied text matches what is on screen, markers included.
+function addCopyButton(card, answer) {
+  const copy = el("button",
+    "absolute right-3 top-3 rounded-md border border-line bg-ink px-2 py-1 text-[11px] " +
+    "text-muted opacity-0 transition group-hover:opacity-100 hover:border-gold/50 hover:text-gold",
+    "Copy");
+  copy.type = "button";
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(answer.textContent);
+      copy.textContent = "Copied";
+    } catch (error) {
+      copy.textContent = "Failed";
+    }
+    setTimeout(() => { copy.textContent = "Copy"; }, 1200);
+  });
+  card.append(copy);
+}
+
+// Above 0.55 a chunk is a real match; below it, mute it.
+function scoreTint(score) {
+  return score > 0.55
+    ? { bar: "bg-gold", text: "text-gold/90" }
+    : { bar: "bg-muted/50", text: "text-muted" };
+}
+
+// Score as a small bar plus the number, so relative strength reads at a glance.
+function scoreBar(score) {
+  const tint = scoreTint(score);
+  const wrap = el("div", "flex shrink-0 items-center gap-2");
+  const track = el("div", "h-1.5 w-14 overflow-hidden rounded-full bg-line");
+  const fill = el("div", "h-full rounded-full " + tint.bar);
+  fill.style.width = Math.round(Math.max(0, Math.min(1, score)) * 100) + "%";
+  track.append(fill);
+  wrap.append(track, el("span", "font-mono text-[11px] tabular-nums " + tint.text, score.toFixed(4)));
+  return wrap;
 }
 
 // A chip per chunk; clicking toggles the chunk's full text underneath.
+// Returns the chips keyed by citation number, so [n] in the answer can
+// reach the chip for chunk n.
 function renderChips(container, expansions, chunks) {
+  const handles = new Map();
   for (const chunk of chunks) {
-    const chip = el("button", "chip");
+    const chip = el("button", STYLE.chip);
     chip.type = "button";
-    chip.setAttribute("aria-expanded", "false");
-    chip.append(el("span", "chip-number", "[" + chunk.n + "]"));
-    chip.append(document.createTextNode(chunk.title + " — " + chunk.section));
+    const number = el("span", STYLE.chipNumber, "[" + chunk.n + "]");
+    chip.append(number, document.createTextNode(chunk.title + " — " + chunk.section));
 
-    const expansion = el("div", "expansion");
+    const expansion = el("div",
+      "mt-3 scroll-mt-24 rounded-lg border border-line bg-ink p-4 text-sm leading-[1.7] text-body");
     expansion.hidden = true;
-    expansion.append(el("div", "expansion-head",
-      "[" + chunk.n + "] " + chunk.title + " — " + chunk.section +
-      "  ·  score " + chunk.score.toFixed(4)));
-    expansion.append(document.createTextNode(chunk.text));
 
-    chip.addEventListener("click", () => {
-      const open = expansion.hidden;
+    const head = el("div", "mb-2 flex items-center justify-between gap-4 text-xs text-muted");
+    head.append(el("span", "truncate", "[" + chunk.n + "] " + chunk.title + " — " + chunk.section));
+    head.append(scoreBar(chunk.score));
+    expansion.append(head);
+    expansion.append(el("div", "whitespace-pre-wrap", chunk.text));
+
+    function show(open) {
       expansion.hidden = !open;
+      chip.className = open ? STYLE.chipOpen : STYLE.chip;
+      number.className = open ? STYLE.chipNumberOpen : STYLE.chipNumber;
       chip.setAttribute("aria-expanded", String(open));
-    });
+    }
+
+    show(false);
+    chip.addEventListener("click", () => show(expansion.hidden));
 
     container.append(chip);
     expansions.append(expansion);
+    handles.set(chunk.n, { expansion, show });
   }
+  return handles;
 }
 
-// Collapsed panel listing every retrieved chunk with its score.
+// Collapsed card listing every retrieved chunk with its score.
 function renderSources(container, chunks) {
-  const details = el("details");
-  details.append(el("summary", null, "Retrieved chunks (" + chunks.length + ")"));
+  const details = el("details", "group/panel mt-5 rounded-xl border border-line bg-ink");
+
+  const summary = el("summary",
+    "flex cursor-pointer select-none items-center gap-2 px-4 py-3 text-muted " +
+    "list-none [&::-webkit-details-marker]:hidden hover:text-body");
+  summary.append(el("span", "inline-block text-gold transition-transform group-open/panel:rotate-90", "›"));
+  summary.append(el("span", "font-display text-[13px] font-semibold tracking-wide",
+    "Retrieved chunks (" + chunks.length + ")"));
+  details.append(summary);
+
   for (const chunk of chunks) {
-    const item = el("div", "chunk");
-    const head = el("div", "chunk-head");
-    head.append(el("span", "score", chunk.score.toFixed(4)));
-    head.append(document.createTextNode(
-      "  ·  [" + chunk.n + "] " + chunk.title + " — " + chunk.section));
+    const item = el("div", "border-t border-line px-4 py-3");
+    const head = el("div", "mb-1.5 flex items-center justify-between gap-4 text-xs text-muted");
+    head.append(el("span", "truncate", "[" + chunk.n + "] " + chunk.title + " — " + chunk.section));
+    head.append(scoreBar(chunk.score));
     item.append(head);
-    item.append(document.createTextNode(chunk.text));
+    item.append(el("div", "whitespace-pre-wrap text-sm leading-[1.7] text-body", chunk.text));
     details.append(item);
   }
+
   container.append(details);
 }
 
-function showError(answer, message) {
-  answer.className = "answer error";
-  answer.textContent = message;
+// Rebuild the answer with each [n] that matches a retrieved chunk as a
+// button. Text still goes in as text nodes, never as markup.
+function renderAnswer(answer, text, citations) {
+  answer.textContent = "";
+  let end = 0;
+  for (const match of text.matchAll(/\[(\d+)\]/g)) {
+    const handle = citations.get(Number(match[1]));
+    if (!handle) continue;
+    answer.append(text.slice(end, match.index));
+
+    const marker = el("button", "align-baseline font-mono text-gold hover:underline", match[0]);
+    marker.type = "button";
+    marker.addEventListener("click", () => {
+      handle.show(true);
+      handle.expansion.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+
+    answer.append(marker);
+    end = match.index + match[0].length;
+  }
+  answer.append(text.slice(end));
 }
+
+// Rebuild a saved conversation from history, using the same renderers.
+function restoreTurn(item) {
+  hideEmpty();
+  log.textContent = "";
+  activeId = item.id;
+  renderHistory();
+
+  const { answer, chips, expansions, sources, card } = startTurn(item.question);
+  answer.className = STYLE.answer;
+  const citations = renderChips(chips, expansions, item.chunks);
+  renderSources(sources, item.chunks);
+  renderAnswer(answer, item.answer, citations);
+  addCopyButton(card, answer);
+  window.scrollTo({ top: 0 });
+}
+
+/* ----------------------------------------------------------------- stream */
 
 // Split an SSE buffer into complete events, returning the trailing partial.
 function parseEvents(buffer, handle) {
@@ -324,20 +444,31 @@ function parseEvents(buffer, handle) {
 }
 
 async function ask(question) {
-  const { answer, chips, expansions, sources } = startTurn(question);
+  const { answer, chips, expansions, sources, card } = startTurn(question);
   let streamed = "";
+  let citations = new Map();
+  let chunks = [];
+  let failed = false;
+
+  function showError(message) {
+    answer.className = STYLE.error;
+    answer.textContent = message;
+    failed = true;
+  }
 
   function handle(name, data) {
     if (name === "chunks") {
-      renderChips(chips, expansions, data.chunks);
-      renderSources(sources, data.chunks);
+      chunks = data.chunks;
+      citations = renderChips(chips, expansions, chunks);
+      renderSources(sources, chunks);
+      if (!streamed) answer.textContent = "answering…";
     } else if (name === "token") {
       streamed += data.text;
-      answer.className = "answer";
+      answer.className = STYLE.answer;
       answer.textContent = streamed;
       scrollToBottom();
     } else if (name === "error") {
-      showError(answer, data.message);
+      showError(data.message);
     }
   }
 
@@ -349,14 +480,14 @@ async function ask(question) {
       body: JSON.stringify({ question }),
     });
   } catch (error) {
-    showError(answer, "Could not reach the server: " + error.message);
+    showError("Could not reach the server: " + error.message);
     return;
   }
 
   // Failures before the stream opens come back as ordinary JSON.
   if (!response.ok) {
     const detail = await response.json().catch(() => null);
-    showError(answer, detail && detail.detail
+    showError(detail && detail.detail
       ? String(detail.detail)
       : "Request failed with status " + response.status);
     return;
@@ -373,17 +504,23 @@ async function ask(question) {
   }
   parseEvents(buffer + "\n\n", handle);
 
-  if (!streamed && !answer.classList.contains("error")) {
-    showError(answer, "The answer stream ended without any text.");
+  if (!streamed && !failed) {
+    showError("The answer stream ended without any text.");
+  } else if (!failed) {
+    // Linkify once the text is final: a marker can arrive split across
+    // tokens, and rebuilding on every token would discard live buttons.
+    renderAnswer(answer, streamed, citations);
+    addCopyButton(card, answer);
+    rememberTurn(question, streamed, chunks);
   }
   scrollToBottom();
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const question = input.value.trim();
-  if (!question) return;
+async function submitQuestion(text) {
+  const question = text.trim();
+  if (!question || input.disabled) return;
 
+  hideEmpty();
   input.value = "";
   input.disabled = button.disabled = true;
   try {
@@ -392,7 +529,17 @@ form.addEventListener("submit", async (event) => {
     input.disabled = button.disabled = false;
     input.focus();
   }
+}
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitQuestion(input.value);
 });
+
+document.getElementById("new-chat").addEventListener("click", newChat);
+
+renderHistory();
+showEmpty();
 </script>
 </body>
 </html>
