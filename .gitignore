@@ -7,5 +7,9 @@ chunks.db
 # Secrets
 .env
 .DS_Store
+
+# Editor settings and stray files from other projects
+.vscode/
+*.session.sql
 __pycache__/
 *.pyc

@@ -8,6 +8,21 @@ Built without LangChain, LlamaIndex, or a vector database. The retrieval,
 the chunking, the SQLite store and the streaming API client are all written
 directly, which keeps the moving parts visible and swappable.
 
+## Quick start
+
+```bash
+git clone https://github.com/restorebalance/clash-rag.git
+cd clash-rag
+pip install -r requirements.txt
+cp .env.example .env          # then put your Cohere key in it
+
+python3 scrape.py && python3 clean.py && python3 ingest.py
+uvicorn app:app --reload      # open http://127.0.0.1:8000
+```
+
+A fresh clone has no data; the three pipeline scripts build it locally.
+Details for each step follow below.
+
 ## How it works
 
 ```
@@ -48,14 +63,30 @@ fast enough that an index would be premature. `store.py` exposes only
 `replace_chunks()` and `search()`, so the backend can be swapped without
 touching anything else.
 
+## Project layout
+
+| File | Role |
+| --- | --- |
+| `config.py` | Loads `.env` with the standard library; `require()` fails with a clear message when a key is missing |
+| `scrape.py` | Fetches card pages from the Fandom MediaWiki API, 1 request per second |
+| `clean.py` | Strips wikitext to prose, drops non-strategy sections, extracts infobox metadata |
+| `ingest.py` | Chunks documents, embeds them with caching and rate-limit pacing, writes the store |
+| `store.py` | SQLite vector store; the only interface is `replace_chunks()` and `search()` |
+| `retrieve.py` | Embeds a question as a query and returns the top-k chunks |
+| `answer.py` | Builds the numbered-excerpt prompt and streams the grounded answer |
+| `app.py` | FastAPI server: `/ask`, `/chunks`, and the web UI at `/` |
+| `index.html` | Single-file frontend, no build step |
+| `eval.py`, `eval_questions.json` | Retrieval evaluation |
+
 ## Setup
 
-Developed on Python 3.14.6. Needs a Cohere API key.
+Developed on Python 3.14.6. Needs a
+[Cohere API key](https://dashboard.cohere.com/api-keys); a free trial key
+is enough.
 
 ```bash
 pip install -r requirements.txt
-
-echo "COHERE_API_KEY=your-key-here" > .env
+cp .env.example .env    # then edit COHERE_API_KEY
 ```
 
 `.env` is gitignored. A shell export overrides it.
@@ -136,6 +167,36 @@ expected page title appears in the top 5. Entries with `"expect": null` are
 questions the corpus cannot answer, and pass only when the best match falls
 below `ABSTAIN_MAX_SCORE`, which catches a retriever that confidently
 returns something for an unanswerable question.
+
+## Tuning
+
+The knobs are module-level constants, each commented where it is defined:
+
+| Constant | Where | Default | Effect |
+| --- | --- | --- | --- |
+| `MAX_CHUNK_CHARS` | `ingest.py` | 1500 | Soft target chunk size |
+| `MIN_DOC_CHARS` | `ingest.py` | 1000 | Pages shorter than this after cleaning are skipped |
+| `EMBED_PAUSE` | `ingest.py` | 22.0 s | Delay between embed batches; lower it on a production key |
+| `K` | `answer.py` | 5 | Chunks retrieved per question |
+| `MAX_TOKENS` | `answer.py` | 1024 | Ceiling on answer length |
+| `ABSTAIN_MAX_SCORE` | `eval.py` | 0.35 | Score below which an unanswerable question counts as handled |
+| `DROP_SECTIONS` | `clean.py` | gallery, history, ... | Wiki sections excluded from the corpus |
+
+Changing chunking or cleaning means re-running `clean.py` and `ingest.py`.
+Unchanged chunks are served from the embedding cache, so only new text
+costs API calls.
+
+## Troubleshooting
+
+- **`COHERE_API_KEY is not set`** — create `.env` from `.env.example`, or
+  `export COHERE_API_KEY=...`.
+- **`429` during ingest** — expected on a trial key; `ingest.py` waits and
+  retries. If it gives up, just re-run it: cached vectors are kept.
+- **Answers say "The store is empty"** — `chunks.db` has no rows; run the
+  pipeline.
+- **Every answer is "I don't know"** — check retrieval on its own with
+  `python3 retrieve.py "..."`. Low scores across the board usually mean the
+  store was built with a different embedding model than the one querying it.
 
 ## Notes
 

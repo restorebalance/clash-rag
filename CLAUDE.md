@@ -1,6 +1,6 @@
 # Project
 RAG pipeline over Clash Royale strategy prose. Backend FastAPI,
-SQLite store, Cohere embeddings, Claude for generation.
+SQLite store, Cohere embeddings, Cohere command-a for generation.
 
 # Rules
 - No LangChain, LlamaIndex, or vector DB libraries. Write it directly.
